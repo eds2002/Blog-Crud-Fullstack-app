@@ -1,0 +1,7 @@
+export {default as Navbar} from './navbar/Navbar'
+export {default as Footer} from './footer/Footer'
+export {default as Hero} from './hero/hero'
+export {default as LatestArticles} from './latestarticles/latestArticles'
+export {default as Editorspicks} from './editorspicks/editorspicks'
+export {default as NavbarStudio} from './navbarstudio/navbarstudio'
+export {default as Comments} from './comments/comments'
