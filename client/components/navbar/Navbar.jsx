@@ -254,10 +254,8 @@ const Navbar = ({user,signed, page,currentUser}) => {
   const [userDash, setUserDash] = useState(false)
 
   const signOut = async () =>{
-    await axios.post('http://localhost:4001/user/logout').then((res)=>{
-      console.log(res)
-      router.push('/')
-    },{withCredentials: true})
+    localStorage.removeItem('accessToken')
+    router.push('/')
   }
 
   const takeToProfile = () =>{
@@ -335,7 +333,7 @@ const Navbar = ({user,signed, page,currentUser}) => {
                 </>
               :
                 <>
-                  <Link href = "/about"><LinkName>About</LinkName></Link>
+                  {/* <Link href = "/about"><LinkName>About</LinkName></Link> */}
                   <Link href = "/user/login"><Button>Get started</Button></Link>
                 </>
               }

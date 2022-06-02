@@ -245,7 +245,7 @@ text-center
 
 
 
-const comments = ({blogData, user,comments}) => {
+const Comments = ({blogData, user,comments}) => {
   const router = useRouter()
   let currentUser = {};
   if(!user){
@@ -278,7 +278,7 @@ const comments = ({blogData, user,comments}) => {
     const comment = e.target.parentElement.querySelector("#commentTextArea").value
     const blogId = blogData.data[0].id
     const userId = user.id
-    await axios.post(`http://localhost:4001/comments/post`,{
+    await axios.post(`https://mysqlnodeblogapp.herokuapp.com/comments/post`,{
       username:username,
       date:date,
       comment:comment,
@@ -293,7 +293,7 @@ const comments = ({blogData, user,comments}) => {
   }
 
   const deleteComment = async (id)=>{
-    await axios.delete(`http://localhost:4001/comments/delete/${id}`)
+    await axios.delete(`https://mysqlnodeblogapp.herokuapp.com/comments/delete/${id}`)
       .then((result)=>{
         setBlogComments(blogComments.filter(arr => arr.id != id))
       })
@@ -383,4 +383,4 @@ const comments = ({blogData, user,comments}) => {
   )
 }
 
-export default comments
+export default Comments

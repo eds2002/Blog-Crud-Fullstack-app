@@ -61,7 +61,8 @@ mb-[10px]
 `
 const Title = tw.p`
 font-bold
-md:text-7xl
+md:text-6xl
+sm:text-4xl
 text-3xl
 hover:text-indigo-600
 transition
@@ -75,7 +76,7 @@ mt-[10px]
 
 
 
-const hero = ({featured}) => {
+const Hero = ({featured}) => {
     const router = useRouter()
     const takeToBlog = (blogId) =>{
         router.push(`/blog/post/${blogId}`)
@@ -98,6 +99,6 @@ const hero = ({featured}) => {
   )
 }
 
-export default hero
+export default Hero
 
   

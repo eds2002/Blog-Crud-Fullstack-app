@@ -1,7 +1,8 @@
-import { decode } from "jsonwebtoken"
 import { useRouter } from "next/router"
 import tw from "tailwind-styled-components/dist/tailwind"
 import { Navbar } from "../../components"
+import {verify,decode} from 'jsonwebtoken'
+import {useState, useEffect} from 'react'
 const Container = tw.section`
 w-[100vw]
 relative
@@ -139,21 +140,34 @@ rounded-3xl
 
 
 
-const userProfile = ({user,userBlogs,currentUser}) => {
-  const userLogged = currentUser === null ? false : true
+const Profile = ({userBlogs,userProfile}) => {
   const router = useRouter()
+  const [user, setUser] = useState({});
+  const [logged, setLogged] = useState(false);
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(userJWT){
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        setUser(decode(userJWT))
+        setLogged(true)
+      }
+    }
+  },[])
+  console.log(userBlogs,userProfile)
+
+
   const takeToBlog = (blogId) =>{
     router.push(`/blog/post/${blogId}`)
   }
   return (
     <Container>
-      <Navbar user = {currentUser} signed = {userLogged}/>
+      <Navbar user = {user} signed = {logged}/>
       <Layout>
         <Wrapper>
           <UserProfile>
             <ImageWrapper></ImageWrapper>
-            <Username>{user.first_name} {user.last_name}</Username>
-            <p>@{user.username}</p>
+            <Username>{userProfile[0].first_name} {userProfile[0].last_name}</Username>
+            <p>@{userProfile[0].username}</p>
             <Description>Blogger at Blog.</Description>
           </UserProfile>
           <UserBlogs>
@@ -164,7 +178,7 @@ const userProfile = ({user,userBlogs,currentUser}) => {
               <BlogsGrid>
                 {userBlogs.length === 0 && (
                   <NoBlogs>
-                    This user hasn't posted any blogs yet!
+                    This user hasn&#39;t posted any blogs yet!
                   </NoBlogs>
                 )}
                 {userBlogs.map((blog,index)=>(
@@ -186,22 +200,20 @@ const userProfile = ({user,userBlogs,currentUser}) => {
   )
 }
 
-export default userProfile
+export default Profile
 
 export async function getServerSideProps(context) {
   const {id} = context.query
-  const jwt = context.req.cookies.userToken
-
 
   // Getting the requsted users blog data
-  const profileBlogsRes = await fetch(`http://localhost:4001/profile/blogs/${id}`)
+  const profileBlogsRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/profile/blogs/${id}`)
   const profileBlogsData = await profileBlogsRes.json()
 
   // Getting the requested users profile data
-  const profileUserRes = await fetch(`http://localhost:4001/user/profile/${id}`)
+  const profileUserRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/user/profile/${id}`)
   const profileUserData = await profileUserRes.json()
   if(profileUserData.result.length != 0){
-    return {props:{user: profileUserData.result[0],userBlogs:profileBlogsData.result, currentUser:decode(jwt)}}
+    return {props:{userBlogs:profileBlogsData.result, userProfile: profileUserData.result}}
   }else{
     return {
         redirect: {

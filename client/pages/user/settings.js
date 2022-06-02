@@ -239,14 +239,38 @@ active:text-red-500
 
 
 
-const settings = ({user, currentUser, logged}) => {
+const UserSettings = ({currentUser}) => {
     const router = useRouter();
-    const [firstName, setFirstName] = useState(user[0].first_name)
-    const [lastName, setLastName] = useState(user[0].last_name)
-    const [username, setUsername] = useState(user[0].username)
+
+    const [user, setUser] = useState({});
+    const [logged, setLogged] = useState(false);
+    const [firstName, setFirstName] = useState()
+    const [lastName, setLastName] = useState()
+    const [username, setUsername] = useState()
     const [userChanges, setUserChanges] = useState(false)
     const [usernameTaken, setUsernameTaken] = useState(null)
     const [delModal, setDelModal] = useState(false)
+    useEffect(()=>{
+        let userJWT = localStorage.getItem('accessToken')
+        if(verify(userJWT, process.env.JWT_SECRET)){
+        setUser(decode(userJWT))
+        setLogged(true)
+        }else{
+            router.push('/404')
+        }
+        const fetchData = async () =>{
+            let currentUser = decode(localStorage.getItem('accessToken'))
+            const profileUserRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/user/profile/${currentUser.id}`)
+            const profileUserData = await profileUserRes.json()
+            console.log(profileUserData.result)
+            setFirstName(profileUserData.result[0].first_name)
+            setLastName(profileUserData.result[0].last_name)
+            setUsername(profileUserData.result[0].username)
+        }
+        fetchData()
+    },[])
+
+
 
     const handleFNameChange = (e)=>{
         if(firstName === e.target.value){
@@ -269,7 +293,7 @@ const settings = ({user, currentUser, logged}) => {
         setUserChanges(true)
     }
 
-    axios.get(`http://localhost:4001/user/username/${username}`)
+    axios.get(`https://mysqlnodeblogapp.herokuapp.com/user/username/${username}`)
     .then((res)=>{
         if(res.data.result.length === 0){
             setUsernameTaken(false)
@@ -282,45 +306,39 @@ const settings = ({user, currentUser, logged}) => {
         if(firstName === '' || lastName === '' || username === ''){
             return 
         }
-        axios.patch(`http://localhost:4001/user/settings/${firstName}/${lastName}/${username}/${user[0].id}`)
+        axios.patch(`https://mysqlnodeblogapp.herokuapp.com/user/settings/${firstName}/${lastName}/${username}/${user.id}`)
             .then((res)=>{
                 router.reload()
         })
     }
 
     const takeToProfile = () =>{
-        router.push(`/profile/${user[0].id}`)
+        router.push(`/profile/${user.id}`)
     }
 
     const handleUserDelete = (userId) =>{
-        axios.delete(`http://localhost:4001/user/delete/${userId}`)
+        axios.delete(`https://mysqlnodeblogapp.herokuapp.com/user/delete/${userId}`)
             .then(()=>{
+                localStorage.clear()
                 router.push('/')
             })
     }
 
   return (
     <Container>
-        <Navbar user = {currentUser} signed = {logged}/>
+        <Navbar user = {user} signed = {logged}/>
         <Layout>
             <Wrapper>
                 <UserTop>
                     <UserTopWrapper>
                         <UserTopHeading>Settings</UserTopHeading>
-                        <UserTopEmail>eds232323@gmail.com</UserTopEmail>
+                        {/* <UserTopEmail></UserTopEmail> */}
                     </UserTopWrapper>
                     <UserTopViewProfile onClick = {()=>takeToProfile()}>
                         View Profile
                     </UserTopViewProfile>
                 </UserTop>
                 <Settings>
-                        {/* <SettingsWrapper>
-                            <PassTextWrapper>
-                                <SettingsPassHeader>Password</SettingsPassHeader>
-                                <SettingsPassDescription>Please enter your original password to change your password.</SettingsPassDescription>
-                            </PassTextWrapper>
-                            <CurrentPassword/>
-                        </SettingsWrapper> */}
                         <FlexRow>
                             <UsernameHeading>Username</UsernameHeading>
                             <FlexCol>
@@ -349,7 +367,7 @@ const settings = ({user, currentUser, logged}) => {
                 <DeleteConfirmation>
                     <DeleteConfirmationWrapper> 
                     <DeleteHeading>Are you sure you want to delete your account? All your blogs & blogs will be removed forver.</DeleteHeading>
-                    <DeleteButton onClick = {()=>handleUserDelete(user[0].id)}>
+                    <DeleteButton onClick = {()=>handleUserDelete(user.id)}>
                         <FontAwesomeIcon icon = {faDeleteLeft}></FontAwesomeIcon>
                             Delete my account
                     </DeleteButton>
@@ -361,23 +379,23 @@ const settings = ({user, currentUser, logged}) => {
   )
 }
 
-export default settings
+export default UserSettings
 
-export async function getServerSideProps(context) {
-    const jwt = context.req.cookies.userToken
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-        const user = decode(jwt)
-        const profileUserRes = await fetch(`http://localhost:4001/user/profile/${user.id}`)
-        const profileUserData = await profileUserRes.json()
+// export async function getServerSideProps(context) {
+//     const jwt = context.req.cookies.userToken
+//     try{
+//         verify(jwt, process.env.JWT_SECRET)
+//         const user = decode(jwt)
+//         const profileUserRes = await fetch(`http://localhost:4001/user/profile/${user.id}`)
+//         const profileUserData = await profileUserRes.json()
 
-        return {props:{user: profileUserData.result,currentUser: user, logged:true}}
-    }catch(error){
-        return {
-            redirect: {
-                permanent: false,
-                destination: "/404"
-            }
-        }
-    }
-}
+//         return {props:{user: profileUserData.result,currentUser: user, logged:true}}
+//     }catch(error){
+//         return {
+//             redirect: {
+//                 permanent: false,
+//                 destination: "/404"
+//             }
+//         }
+//     }
+// }

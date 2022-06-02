@@ -3,7 +3,7 @@ import { Navbar } from '../../../components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDeleteLeft, faEye, faEyeSlash, faEdit, faCircle, faTimes, faPen } from '@fortawesome/free-solid-svg-icons'
 import {verify, decode} from 'jsonwebtoken'
-import {useState} from 'react'
+import {useState,useEffect} from 'react'
 import {useRouter} from 'next/router'
 import axios from 'axios'
 
@@ -256,9 +256,30 @@ active:text-indigo-600
 
 
 
-const userprofile = ({currentUser, userBlogs, logged}) => {
+const UserBlogs = () => {
   const router = useRouter()
-  const [blogsArray, setBlogsArr] = useState(userBlogs.result)
+
+  const [user, setUser] = useState({});
+  const [logged, setLogged] = useState(false);
+  const [blogsArray, setBlogsArr] = useState([])
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(verify(userJWT, process.env.JWT_SECRET)){
+      setUser(decode(userJWT))
+      setLogged(true)
+    }else{
+      router.push('/404')
+    }
+    const fetchData = async () =>{
+      const currentUser = decode(localStorage.getItem('accessToken'))
+      const userBlogsRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/blog/all/${currentUser.id}`);
+      const userBlogsData = await userBlogsRes.json()
+      setBlogsArr(userBlogsData.result)
+    }
+    fetchData();
+  },[])
+
+
   const [warningModal, setWarningModal] = useState(false)
 
   const redirectToBlog = (blogId) =>{
@@ -276,14 +297,14 @@ const userprofile = ({currentUser, userBlogs, logged}) => {
   const changeBlogStatus = async (blogId, status,index) =>{
     // If current status is true/ x>=1 (PUBLISHED), add logic to update status to 0 or false
     if(status >= 1){
-      await axios.patch(`http://localhost:4001/blog/status/${blogId}/0`)
+      await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/blog/status/${blogId}/0`)
         .then((res)=>{
           blogsArray[index].status = 0
           setBlogsArr([...blogsArray])
         })
     }else{
       // Update status to true, published
-      await axios.patch(`http://localhost:4001/blog/status/${blogId}/1`)
+      await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/blog/status/${blogId}/1`)
         .then((res)=>{
           blogsArray[index].status = 1
           setBlogsArr([...blogsArray])
@@ -297,10 +318,10 @@ const userprofile = ({currentUser, userBlogs, logged}) => {
 
   return (
     <Container>
-      <Navbar signed = {logged} user = {currentUser}/>
+      <Navbar signed = {logged} user = {user}/>
       <Layout>
         <Wrapper>
-          <Heading>Hi {currentUser.firstName}!</Heading>
+          <Heading>Hi {user.firstName}!</Heading>
           <AllUserBlogs>My blogs</AllUserBlogs>
           <Flex>
             {blogsArray.length === 0 && (
@@ -384,26 +405,4 @@ const userprofile = ({currentUser, userBlogs, logged}) => {
   )
 }
 
-export default userprofile
-
-export async function getServerSideProps({req,res}) {
-    const jwt = req.cookies.userToken
-
-    if(jwt){
-        try{
-            verify(jwt, process.env.JWT_SECRET)
-            const user = decode(jwt)
-            const userBlogsRes = await fetch(`http://localhost:4001/blog/all/${user.id}`);
-            const userBlogsData = await userBlogsRes.json()
-
-            return{props: {currentUser:decode(jwt), userBlogs: userBlogsData, logged:true}}
-        }catch(e){
-            return {
-                redirect: {
-                  permanent: false,
-                  destination: "/"
-                }
-            }
-        }
-    }
-}
+export default UserBlogs

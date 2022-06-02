@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors'
 const router = express.Router();
 router.use(cookieParser())
-router.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+// router.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 
 // User Login
 router.post('/login', async (req,res)=>{
@@ -34,13 +34,7 @@ router.post('/login', async (req,res)=>{
                         res.clearCookie("userToken");
                         // Creating cookie, sending information to function
                         const accessToken = createToken(dbUser)
-                        return res.status(202).cookie('userToken',  accessToken, {
-                            sameSite: 'None',
-                            path: '/',
-                            expires: new Date(new Date().getTime() + 500000 * 1000),
-                            httpOnly: true,
-                            secure:true
-                        }).json({message:'success'})
+                        return res.status(202).json({message:'success',token: accessToken})
                     })
                 }
             })
@@ -69,13 +63,7 @@ router.post('/signup',(req,res)=>{
                 
                 // Creating cookie, sending information to function
                 const accessToken = createToken(dbUser)
-                return res.status(202).cookie('userToken',  accessToken, {
-                    sameSite: 'None',
-                    path: '/',
-                    expires: new Date(new Date().getTime() + 500000 * 1000),
-                    httpOnly: true,
-                    secure:true
-                }).send("Success")
+                return res.status(202).json({message:'success',token: accessToken})
             })
         })
     })

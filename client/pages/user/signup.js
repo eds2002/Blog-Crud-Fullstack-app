@@ -1,13 +1,21 @@
 import tw from 'tailwind-styled-components/dist/tailwind';
 import {verify} from 'jsonwebtoken'
-import {useState} from 'react'
+import {useState,useEffect} from 'react'
 import axios from 'axios';
 import { useRouter } from 'next/router'
-import {Navbar} from '../../components/'
+import {Navbar} from '../../components'
 axios.defaults.withCredentials = true
 
-const signup = () => {
+const Signup = () => {
   const router = useRouter()
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(userJWT){
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        router.push('/')
+      }
+    }
+  },[])
   const [emailError, setEmailError] = useState(false)
 
   const [passError, setPassError] = useState(false)
@@ -27,10 +35,10 @@ const signup = () => {
     }
     setPassError(false)
 
-    await axios.get(`http://localhost:4001/user/username/${username}`)
+    await axios.get(`https://mysqlnodeblogapp.herokuapp.com/user/username/${username}`)
       .then((result)=>{
         if(result.data.result.length === 0){
-          axios.post('http://localhost:4001/user/signup',{
+          axios.post('https://mysqlnodeblogapp.herokuapp.com/user/signup',{
           email: email,
           password: password,
           firstName: firstName,
@@ -42,12 +50,13 @@ const signup = () => {
         },{withCredentials: true})
         .then((response)=>{
           setEmailError(false)
+          localStorage.setItem('accessToken', response.data.token)
           router.push('/')
         })
         .catch((error)=>{
+          console.log(error)
           setEmailError(true)
         })
-        }else{
         }
       })
 
@@ -58,7 +67,7 @@ const signup = () => {
       <Navbar/>
       <Layout>
         <Heading>Hi newbie,</Heading>
-        <Subheading>Let's get you started as quick as possible!</Subheading>
+        <Subheading>Let&#39;s get you started as quick as possible!</Subheading>
         <Form onSubmit = {(e)=>handleSubmit(e)} method = "POST">
           <Wrapper>
             <InputWrapper>
@@ -195,26 +204,4 @@ text-xs
 text-red-500
 `
 
-export default signup
-
-export async function getServerSideProps({req,res}) {
-  const jwt = req.cookies.userToken
-  if(!jwt){
-    return{props:{}}
-  }
-
-  if(jwt){
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-        return {
-          redirect: {
-            permanent: false,
-            destination: "/",
-          },
-          props:{},
-        };
-    }catch(e){
-      return{props:{}}
-    }
-  }
-}
+export default Signup

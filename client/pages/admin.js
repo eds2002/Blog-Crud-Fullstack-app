@@ -1,7 +1,7 @@
 import { verify, decode } from "jsonwebtoken"
 import { useRouter } from "next/router"
 import tw from "tailwind-styled-components/dist/tailwind"
-import {Navbar} from '../components/'
+import {Navbar} from '../components'
 import {useState} from 'react'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faExchange, faDeleteLeft, faD } from "@fortawesome/free-solid-svg-icons"
@@ -158,7 +158,7 @@ left-0
 right-0
 `
 
-const admin = ({allUsers, allBlogs,currentUser,logged}) => {
+const Admin = ({allUsers, allBlogs,currentUser,logged}) => {
     const userLogged = currentUser === null ? false : true
     // const [currentFilter, setCurrentFilter] = useState('users')
     const [users, setUsers] = useState(allUsers)
@@ -171,13 +171,13 @@ const admin = ({allUsers, allBlogs,currentUser,logged}) => {
         if(role === 'admin'){
             users[index].roles = 'user'
             setUsers([...users])
-            await axios.patch(`http://localhost:4001/user/role/${userId}/user`)
+            await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/user/role/${userId}/user`)
                 .then((res)=>{
                 })
         }else{
             users[index].roles = 'admin'
             setUsers([...users])
-            await axios.patch(`http://localhost:4001/user/role/${userId}/admin`)
+            await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/user/role/${userId}/admin`)
                 .then((res)=>{
                 })
         }
@@ -217,7 +217,7 @@ const admin = ({allUsers, allBlogs,currentUser,logged}) => {
   )
 }
 
-export default admin
+export default Admin
 
 export async function getServerSideProps(context) {
     const jwt = context.req.cookies.userToken
@@ -228,11 +228,11 @@ export async function getServerSideProps(context) {
         // A admin can see a assign roles or even change roles
 
         // Fetching user data
-        const allUsersRes = await fetch('http://localhost:4001/user/all')
+        const allUsersRes = await fetch('https://mysqlnodeblogapp.herokuapp.com/user/all')
         const allUsersData = await allUsersRes.json()
 
         // Fetching all blogs data
-        const allBlogsRes = await fetch('http://localhost:4001/blog')
+        const allBlogsRes = await fetch('https://mysqlnodeblogapp.herokuapp.com/blog')
         const allBlogsData = await allBlogsRes.json()
         return {props:{allUsers: allUsersData.result, allBlogs: allBlogsData, currentUser:decode(jwt)}}
     }else{

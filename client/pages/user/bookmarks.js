@@ -4,7 +4,7 @@ import { verify, decode } from 'jsonwebtoken'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faBinoculars, faBook, faDeleteLeft, faGlasses } from "@fortawesome/free-solid-svg-icons"
 import axios from "axios"
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import { useRouter } from "next/router"
 
 const Container = tw.section`
@@ -114,16 +114,44 @@ justify-center
 gap-x-3
 `
 
-const bookmark = ({user, logged, blogsBookmarked}) => {
+const Bookmarks = () => {
   
   const router = useRouter()
-  const [bookmarksArr, setBookmarksArr] = useState(blogsBookmarked.result)
+  const [user, setUser] = useState({});
+  const [logged, setLogged] = useState(false);
+  const [bookmarksArr, setBookmarksArr] = useState()
+
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(verify(userJWT, process.env.JWT_SECRET)){
+      setUser(decode(userJWT))
+      setLogged(true)
+    }else{
+      router.push('/404')
+    }
+
+    const fetchData = async () =>{
+      const currentUser = decode(localStorage.getItem('accessToken'))
+      // Fetch bookmarks
+      const bookmarkRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/bookmarks/${currentUser.id}`)
+      const bookmarkData = await bookmarkRes.json()
+      let result = bookmarkData.result.map(bookmark => ({ id: bookmark.blog_id}));
+      const arrData = JSON.stringify(result)
+        
+      // Fetch blogs
+      const blogsRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/blog/getall/${arrData}`)
+      const blogsData = await blogsRes.json()
+      setBookmarksArr(blogsData.result)
+      console.log(blogsData)
+    }
+    fetchData()
+  },[])
 
 
   const removeBookmark = async (id) =>{
     // Update usestate by using filter to remove necessary obj
     setBookmarksArr(bookmarksArr.filter(arr => arr.id != id))
-    await axios.delete(`http://localhost:4001/bookmarks/remove/${id}`)
+    await axios.delete(`https://mysqlnodeblogapp.herokuapp.com/bookmarks/remove/${id}`)
       .then((res)=>{
       })
   }
@@ -156,7 +184,7 @@ const bookmark = ({user, logged, blogsBookmarked}) => {
                     <>
                       {blog.status != 0 && (
                         <BookmarkCard key = {key}>
-                          <BookmarkDate>Bookmark.</BookmarkDate>
+                          <BookmarkDate>@{blog.author_username}</BookmarkDate>
                           <BookmarkTitle className = "scrollbar">
                             <p className = "transition cursor-pointer hover:text-indigo-600"onClick = {()=>goToBlog(blog.id)}>
                               {blog.title}
@@ -178,35 +206,4 @@ const bookmark = ({user, logged, blogsBookmarked}) => {
   )
 }
 
-export default bookmark
-
-export async function getServerSideProps({req,res}) {
-  const jwt = req.cookies.userToken || null
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-
-        const currentUser = decode(jwt)
-        const currentUserId = currentUser.id
-
-         // Fetch bookmarks
-        const bookmarkRes = await fetch(`http://localhost:4001/bookmarks/${currentUserId}`)
-        const bookmarkData = await bookmarkRes.json()
-        let result = bookmarkData.result.map(bookmark => ({ id: bookmark.blog_id}));
-        const arrData = JSON.stringify(result)
-
-        
-        // Fetch blogs
-        const blogsRes = await fetch(`http://localhost:4001/blog/getall/${arrData}`)
-        const blogsData = await blogsRes.json()
-
-        return{props: {user:decode(jwt),logged:true, blogsBookmarked: blogsData}}
-    }catch(e){
-      return {
-        redirect: {
-          permanent: false,
-          destination: "/404",
-        },
-        props:{},
-      };
-    }
-}
+export default Bookmarks

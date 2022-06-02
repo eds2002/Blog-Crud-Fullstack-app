@@ -2,6 +2,7 @@ import tw from "tailwind-styled-components/dist/tailwind"
 import { Navbar } from "../../components"
 import { verify, decode } from 'jsonwebtoken'
 import { useRouter } from "next/router"
+import {useState, useEffect} from 'react'
 
 
 const Container = tw.section`
@@ -26,7 +27,8 @@ w-full
 grid
 lg:grid-cols-4
 md:grid-cols-3
-grid-cols-2
+sm:grid-cols-2
+grid-cols-1
 gap-10
 mt-[50px]
 mb-[100px]
@@ -84,8 +86,19 @@ transition
 `
 
 
-const all = ({user, logged, allBlogs}) => {
+const All = ({allBlogs}) => {
   const router = useRouter()
+  const [user, setUser] = useState('');
+  const [logged, setLogged] = useState(false);
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(userJWT){
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        setUser(decode(userJWT))
+        setLogged(true)
+      }
+    }
+  },[])
   const goToBlog = (id) =>{
     router.push(`/blog/post/${id}`)
   }
@@ -117,11 +130,11 @@ const all = ({user, logged, allBlogs}) => {
   )
 }
 
-export default all
+export default All
 
 export async function getServerSideProps({req,res}) {
   const jwt = req.cookies.userToken || null
-  const allBlogsRes = await fetch('http://localhost:4001/blog')
+  const allBlogsRes = await fetch('https://mysqlnodeblogapp.herokuapp.com/blog')
   const allBlogsData = await allBlogsRes.json()
   try{
       verify(jwt, process.env.JWT_SECRET)

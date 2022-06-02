@@ -5,12 +5,19 @@ import {verify} from 'jsonwebtoken'
 import axios from "axios"
 import { Navbar } from "../../components"
 import { useRouter } from "next/router"
-import {useState} from 'react'
+import {useState,useEffect} from 'react'
 
 
-const login = () => {
+const Login = () => {
   const router = useRouter();
-
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(userJWT){
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        router.push('/')
+      }
+    }
+  },[])
   const [emailError, setEmailError] = useState(false)
   const [passwordError, setPasswordError] = useState(false)
 
@@ -19,11 +26,12 @@ const login = () => {
 
     const email = e.target.email.value
     const password = e.target.password.value
-    await axios.post('http://localhost:4001/user/login',{
+    await axios.post('https://mysqlnodeblogapp.herokuapp.com/user/login',{
       email:email,
       password:password,
     },{withCredentials: true})
-    .then(()=>{
+    .then((res)=>{
+      localStorage.setItem('accessToken', res.data.token)
       router.push('/')
     })
     .catch((error)=>{
@@ -64,29 +72,15 @@ const login = () => {
             <PassInvalid visible = {passwordError}>Incorrect password, try again.</PassInvalid>
           </InputWrapper>
           <Button>Sign me in</Button>
-          <SignupSpan onClick = {()=>takeToSignup()}>Don't have an account? Sign up.</SignupSpan>
+          <SignupSpan onClick = {()=>takeToSignup()}>Don&#39;t have an account? Sign up.</SignupSpan>
         </Form>
       </Layout>
     </Container>
   )
 }
 
-export default login
+export default Login
 
-export async function getServerSideProps({req,res}) {
-  const jwt = req.cookies.userToken
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-        return{
-          redirect: {
-            permanent: false,
-            destination: "/"
-          } 
-        }
-    }catch(e){
-      return{props:{}}
-    }
-}
 
 const Container = tw.section`
 w-[100vw]

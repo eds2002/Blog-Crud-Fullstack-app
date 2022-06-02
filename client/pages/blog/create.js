@@ -3,7 +3,7 @@ import { Navbar, NavbarStudio } from "../../components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFlag, faBookmark, faTimes, faBoxes } from "@fortawesome/free-solid-svg-icons"
 import {verify, decode} from 'jsonwebtoken'
-import {useState, useCallback} from 'react'
+import {useState, useCallback, useEffect} from 'react'
 import ReactHtmlParser from 'html-react-parser';
 import { useRouter } from "next/router"
 import axios from "axios"
@@ -215,10 +215,17 @@ hover:text-blue-600
 transition
 `
 
-const create = ({user}) => {
-  
+const Create = () => {
     const router = useRouter();
-
+    const [user, setUser] = useState('');
+    const [logged, setLogged] = useState(false);
+    useEffect(()=>{
+      let userJWT = localStorage.getItem('accessToken')
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        setUser(decode(userJWT))
+        setLogged(true)
+      }
+    },[])
 
     const [state,updateState] = useState()
     const forceUpdate = useCallback(() => updateState({}), []);
@@ -226,7 +233,7 @@ const create = ({user}) => {
     const [title, setTitle] = useState('')
     const [notes, setNotes] = useState('')
 
-
+    console.log(user)
     const AddP = () =>{
         setInputField([...inputField, {textbox: '', type: 'p'}])
     }
@@ -297,7 +304,7 @@ const create = ({user}) => {
       const date = new window.Date();
 
 
-      await axios.post('http://localhost:4001/blog/create', {
+      await axios.post('https://mysqlnodeblogapp.herokuapp.com/blog/create', {
         userId:userId,
         text:dbText,
         title:title,
@@ -361,7 +368,7 @@ const create = ({user}) => {
       const date = new window.Date();
 
 
-      await axios.post('http://localhost:4001/blog/create', {
+      await axios.post('https://mysqlnodeblogapp.herokuapp.com/blog/create', {
         userId:userId,
         text:dbText,
         title:title,
@@ -408,7 +415,7 @@ const create = ({user}) => {
               <AuthorInformation>
                 <InfoWrapper>
                   <AuthorName>Author Notes:</AuthorName>
-                  <Description required></Description>
+                  <Description required onChange = {(e)=>setNotes(e.target.value)}></Description>
                 </InfoWrapper>
               </AuthorInformation>
             </Wrapper>
@@ -417,20 +424,20 @@ const create = ({user}) => {
   )
 }
 
-export default create
+export default Create
 
-export async function getServerSideProps({req,res}) {
-  const jwt = req.cookies.userToken || null
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-        return{props: {user:decode(jwt)}}
-    }catch(e){
-      return {
-        redirect: {
-          permanent: false,
-          destination: "/404",
-        },
-        props:{},
-      };
-    }
-}
+// export async function getServerSideProps({req,res}) {
+//   const jwt = req.cookies.userToken || null
+//     try{
+//         verify(jwt, process.env.JWT_SECRET)
+//         return{props: {user:decode(jwt)}}
+//     }catch(e){
+//       return {
+//         // redirect: {
+//         //   permanent: false,
+//         //   destination: "/404",
+//         // },
+//         props:{},
+//       };
+//     }
+// }

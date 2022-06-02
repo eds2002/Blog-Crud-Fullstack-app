@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFlag, faBookmark, faDeleteLeft, faPen, faTimes, faSignIn } from "@fortawesome/free-solid-svg-icons"
 import ReactHtmlParser from 'html-react-parser';
 import {verify, decode} from 'jsonwebtoken'
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import axios from "axios";
 import { useRouter } from "next/router";
 
@@ -303,7 +303,7 @@ bg-black/50
 flex
 items-center
 justify-center
-z-[9999999999999999999999999999999999999999]
+z-[99999999999999999999999999999999999999999999999999999999999999999999999999999999]
 `
 const SignupModalWrapper = tw.div`
 w-full
@@ -353,22 +353,39 @@ cursor-pointer
 `
 
 
-const post = ({id, user,logged,comments, userBookmark}) => {
+const Post = ({id,comments, userBookmark}) => {
   const router = useRouter();
-  let isBookmarked
+
+  const [user, setUser] = useState(null);
+  const [logged, setLogged] = useState(false);
+  const [bookmarkData, setBookmarkData] = useState();
+  const [userBookmarked, setUserBookmarked] = useState(false)
+  const [bookmarkId, setBookmarkId] = useState()
+  useEffect(()=>{
+    let userJWT = localStorage.getItem('accessToken')
+    if(userJWT){
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        setUser(decode(userJWT))
+        setLogged(true)
+      }
+      async function fetchData() {
+        const currentUser = decode(localStorage.getItem('accessToken'))
+        const userBookmark = await fetch(`https://mysqlnodeblogapp.herokuapp.com/bookmarks/${id.data[0].id}/${userJWT.id}`)
+        const userBookmarkData = await userBookmark.json()
+        setBookmarkId(userBookmarkData.result.length === 0 ? null : userBookmarkData.result[0].id)
+        setUserBookmarked(userBookmarkData.result.length === 0 ? false : userBookmarkData.result.some(id => id.user_id === currentUser.id))
+        setBookmarkData(userBookmarkData)
+      }
+      fetchData()
+    }
+  },[])
+  console.log(userBookmarked)
+
+
   const parseText = JSON.parse(id.data[0].text)
   
-  // If there is a user present, check if they bookmarked this article.
-  if(user){
-    isBookmarked = userBookmark.result.length === 0 ? false : userBookmark.result.some(id => id.user_id === user.id)
-  }else{
-    // If no user, auto set to false
-    isBookmarked = false
-  }
   // If a user exists (if mysql returns an empty array, the user hasn't bookmarked this page, else the user did bookmark), if no user set to null
-  const [bookmarkId, setBookmarkId] = useState(user ? userBookmark.result.length === 0 ? null : userBookmark.result[0].id : null)
   const [delModal, setDelModal] = useState(false)
-  const [bookmark, setBookmark] = useState(isBookmarked)
   const [registerModal, setRegisterModal] = useState(false)
 
 
@@ -394,7 +411,7 @@ const post = ({id, user,logged,comments, userBookmark}) => {
     const postId = id.data[0].id
 
 
-    await axios.delete(`http://localhost:4001/blog/delete/${postId}`)
+    await axios.delete(`https://mysqlnodeblogapp.herokuapp.com/blog/delete/${postId}`)
     router.push('/')
   }
 
@@ -408,26 +425,26 @@ const post = ({id, user,logged,comments, userBookmark}) => {
 
 
     // If user has not bookmarked this page, then apply logic to add the bookmark to user
-    if(!bookmark){
+    if(!userBookmarked){
       const userId = currentUser.id
       const blogId = id.data[0].id
       const time = new window.Date()
-      await axios.post('http://localhost:4001/bookmarks/add',{
+      await axios.post('https://mysqlnodeblogapp.herokuapp.com/bookmarks/add',{
         userId:userId,
         blogId:blogId,
         time:time,
       })
         .then((res)=>{
-          setBookmark(true)
+          setUserBookmarked(true)
           setBookmarkId(res.data.result.insertId) 
         })
       return;
     }
 
       // Apply logic to remove bookmark from users bookmarks
-      await axios.delete(`http://localhost:4001/bookmarks/delete/${bookmarkId}`)
+      await axios.delete(`https://mysqlnodeblogapp.herokuapp.com/bookmarks/delete/${bookmarkId}`)
         .then((res)=>{
-          setBookmark(false)
+          setUserBookmarked(false)
         })
   }
 
@@ -482,7 +499,7 @@ const post = ({id, user,logged,comments, userBookmark}) => {
                 <Buttons>
                   <Bookmark onClick = {()=>addToBookmarks()}>
                     <FontAwesomeIcon icon = {faBookmark}></FontAwesomeIcon>
-                    {bookmark ? "Remove from bookmarks" : "Add to bookmarks"}
+                    {userBookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
                   </Bookmark>
                   {currentUser.role === "admin" || currentUser.id=== id.data[0].user_id ?
                     <>
@@ -543,18 +560,19 @@ const post = ({id, user,logged,comments, userBookmark}) => {
   )
 }
 
-export default post
+export default Post
 
-export async function getServerSideProps(context) {
-  // Get the id from url 
+
+export async function getServerSideProps(context){
+   // Get the id from url 
   const { id } = context.query;
 
   // Fetch blog id to load onto page
-  const blogRes = await fetch(`http://localhost:4001/blog/${id}`)
+  const blogRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/blog/${id}`)
   const blogData = await blogRes.json()
 
   // Fetch comments from blog id
-  const commentRes = await fetch(`http://localhost:4001/comments/blog/${id}`)
+  const commentRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/comments/blog/${id}`)
   const commentData = await commentRes.json()
 
 
@@ -567,43 +585,70 @@ export async function getServerSideProps(context) {
       },
       props:{},
     };
-  }
-
-
-
-  // Checking if jwt is valid
-  const jwt = context.req.cookies.userToken;
-  try{
-    // Verify user token
-    verify(jwt, process.env.JWT_SECRET)
-    const userId = decode(jwt)
-    // Check if status is published or not published, if user matches blogId, allow user to view post, other users cannot view post
-    if(blogData.data[0].user_id != userId.id && blogData.data[0].status === 0){
-      return {
-        redirect: {
-          permanent: false,
-          destination: "/404",
-        },
-        props:{},
-      };
-    }
-
-    // Once token is valid, fetch bookmarks to check if user has bookmarked this page
-    const bookmark = await fetch(`http://localhost:4001/bookmarks/${id}/${userId.id}`)
-    const bookmarkData = await bookmark.json()
-
-    // Return all data
-    return {props: {user:decode(jwt),logged:true, id:blogData, comments: commentData, userBookmark: bookmarkData}}
-  }catch(error){
-    if(blogData.data[0].status ===0){
-      return {
-        redirect: {
-          permanent: false,
-          destination: "/404",
-        },
-        props:{},
-      };
-    }
-    return {props: {id:blogData, comments: commentData}}
-  }
+  } 
+  return {props:{comments:commentData, id:blogData}}
 }
+
+
+// export async function getServerSideProps(context) {
+//   // Get the id from url 
+//   const { id } = context.query;
+
+//   // Fetch blog id to load onto page
+//   const blogRes = await fetch(`http://localhost:4001/blog/${id}`)
+//   const blogData = await blogRes.json()
+
+//   // Fetch comments from blog id
+//   const commentRes = await fetch(`http://localhost:4001/comments/blog/${id}`)
+//   const commentData = await commentRes.json()
+
+
+//   // If blog data receives null, redirect, no page exists
+//   if(blogData.error === null){
+//     return {
+//       redirect: {
+//         permanent: false,
+//         destination: "/404",
+//       },
+//       props:{},
+//     };
+//   }
+
+
+
+//   // Checking if jwt is valid
+//   const jwt = context.req.cookies.userToken;
+//   try{
+//     // Verify user token
+//     verify(jwt, process.env.JWT_SECRET)
+//     const userId = decode(jwt)
+//     // Check if status is published or not published, if user matches blogId, allow user to view post, other users cannot view post
+//     if(blogData.data[0].user_id != userId.id && blogData.data[0].status === 0){
+//       return {
+//         redirect: {
+//           permanent: false,
+//           destination: "/404",
+//         },
+//         props:{},
+//       };
+//     }
+
+//     // Once token is valid, fetch bookmarks to check if user has bookmarked this page
+//     const bookmark = await fetch(`http://localhost:4001/bookmarks/${id}/${userId.id}`)
+//     const bookmarkData = await bookmark.json()
+
+//     // Return all data
+//     return {props: {user:decode(jwt),logged:true, id:blogData, comments: commentData, userBookmark: bookmarkData}}
+//   }catch(error){
+//     if(blogData.data[0].status ===0){
+//       return {
+//         redirect: {
+//           permanent: false,
+//           destination: "/404",
+//         },
+//         props:{},
+//       };
+//     }
+//     return {props: {id:blogData, comments: commentData}}
+//   }
+// }

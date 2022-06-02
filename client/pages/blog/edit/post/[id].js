@@ -3,7 +3,7 @@ import { Navbar, NavbarStudio } from "../../../../components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFlag, faBookmark, faTimes, faBoxes, faEyeSlash , faEye} from "@fortawesome/free-solid-svg-icons"
 import {verify, decode} from 'jsonwebtoken'
-import {useState, useCallback} from 'react'
+import {useState, useEffect} from 'react'
 import ReactHtmlParser from 'html-react-parser';
 import { useRouter } from "next/router"
 import axios from "axios"
@@ -218,8 +218,20 @@ transition
 `
 
 
-const edit = ({user,editBlog}) => {
+const Edit = ({user,editBlog}) => {
     const router = useRouter();
+    useEffect(()=>{
+      let userJWT = localStorage.getItem('accessToken')
+      if(verify(userJWT, process.env.JWT_SECRET)){
+        const currentUser = decode(userJWT)
+        if(!currentUser.id === editBlog.data[0].user_id){
+          router.push('/404')
+        }
+      }
+    },[])
+
+
+
     const parseText = JSON.parse(editBlog.data[0].text)
     const [previousText, setPreviousText] = useState(parseText)
     const [inputField, setInputField] = useState([])
@@ -285,7 +297,7 @@ const edit = ({user,editBlog}) => {
         const dbText = JSON.stringify([...previousText,...textArr]); // Combining previous user text with new text if any
         const blogId = editBlog.data[0].id
         const dateModified = new window.Date()
-        await axios.patch(`http://localhost:4001/blog/edit/${blogId}`, {
+        await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/blog/edit/${blogId}`, {
           text:dbText,
           title:title,
           authorNotes:notes,
@@ -327,7 +339,7 @@ const edit = ({user,editBlog}) => {
       const dbText = JSON.stringify([...previousText,...textArr]); // Combining previous user text with new text if any
       const blogId = editBlog.data[0].id
       const dateModified = new window.Date()
-      await axios.patch(`http://localhost:4001/blog/edit/${blogId}`, {
+      await axios.patch(`https://mysqlnodeblogapp.herokuapp.com/blog/edit/${blogId}`, {
         text:dbText,
         title:title,
         authorNotes:notes,
@@ -406,34 +418,11 @@ const edit = ({user,editBlog}) => {
   )
 }
 
-export default edit
+export default Edit
 
 export async function getServerSideProps(context) {
-    const jwt = context.req.cookies.userToken || null;
-    try{
-        verify(jwt, process.env.JWT_SECRET)
-        const id = context.query
-        const blogRes = await fetch(`http://localhost:4001/blog/${id.id}`)
-        const blogData = await blogRes.json()
-        const userId = decode(jwt).id
-        if(userId === blogData.data[0].user_id){
-            return{props: {user:decode(jwt), editBlog: blogData}}
-        }else{
-            return {
-                redirect: {
-                  permanent: false,
-                  destination: "/",
-                },
-                props:{},
-            };
-        }
-    }catch(e){
-      return {
-        redirect: {
-          permanent: false,
-          destination: "/",
-        },
-        props:{},
-      };
-    }
+    const id = context.query
+    const blogRes = await fetch(`https://mysqlnodeblogapp.herokuapp.com/blog/${id.id}`)
+    const blogData = await blogRes.json()
+    return{props: {editBlog: blogData}}
 }
