@@ -66,8 +66,8 @@ text-xs
 `
 const Tag = tw.div``
 const Title = tw.div`
-md:text-7xl
-text-6xl
+md:text-6xl
+text-5xl
 font-bold
 md:w-[70%]
 w-full

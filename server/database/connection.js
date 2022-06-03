@@ -1,11 +1,11 @@
 import mysql from 'mysql'
 
 const connection = mysql.createPool({
-    host: "us-cdbr-east-05.cleardb.net",
-    user:"b296e48a620231",
-    password:"bdd96b00",
+    host: process.env.HOST,
+    user:process.env.USER,
+    password:process.env.PASSWORD,
     connectionLimit: 10,
-    database: 'heroku_ec847b72efc621c',
+    database: process.env.DATABASE,
     multipleStatements: true,
 })
 
